@@ -28,9 +28,7 @@ Run `just` with no args for the full recipe list.
 ## Migrations
 
 ```sh
-just migrate-new  <svc> <name>  # create a new migration file
-just migrate-hash <svc>         # recompute atlas.sum after manual edits
-just migrate-lint <svc>         # lint against an ephemeral postgres dev container
+just n <svc> <name>  # create a new migration file (alias for `new`)
 ```
 
 ## Layout

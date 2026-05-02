@@ -5,6 +5,7 @@ KIND_CLUSTER := "atlas-local"
 alias au := argocd-ui
 alias b := build
 alias d := down
+alias n := new
 alias u := up
 
 [private]
@@ -55,18 +56,8 @@ argocd-ui:
 # -------------------------------------------------------------------
 [doc('Create a new migration file under db/<SVC>/migrations.')]
 [group('migrate')]
-migrate-new SVC NAME:
+new SVC NAME:
     atlas migrate new --dir file://db/{{ SVC }}/migrations {{ NAME }}
-
-[doc('Recompute atlas.sum for db/<SVC>/migrations.')]
-[group('migrate')]
-migrate-hash SVC:
-    atlas migrate hash --dir file://db/{{ SVC }}/migrations
-
-[doc('Lint migrations against an ephemeral postgres dev container.')]
-[group('migrate')]
-migrate-lint SVC:
-    atlas migrate lint --dir file://db/{{ SVC }}/migrations --dev-url docker://postgres/16/dev
 
 # build
 # -------------------------------------------------------------------
