@@ -4,6 +4,8 @@ FROM gcr.io/distroless/static:nonroot
 
 ARG SERVICE_NAME
 
+WORKDIR /
+
 COPY --from=atlas /atlas /atlas
 COPY atlas.hcl /atlas.hcl
 COPY db/${SERVICE_NAME}/migrations /migrations
