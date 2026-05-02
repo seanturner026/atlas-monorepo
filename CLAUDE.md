@@ -1,27 +1,38 @@
 # CLAUDE.md
 
-Conventions and context for this repo. See `PLAN.md` for the full design.
+Conventions and context for this repo.
 
 ## What this repo is
 
-A monorepo for [Atlas](https://atlasgo.io/)-managed Postgres migrations across
-multiple databases, deployed to a local [kind](https://kind.sigs.k8s.io/)
-cluster via ArgoCD. Each database is a directory under `db/`. A single
-ApplicationSet discovers databases by scanning `db/*` and templates one
-ArgoCD Application per database. Each Application owns both the per-db
-Postgres and the migrate Job; sync waves order them (postgres first, Job
-second).
+A monorepo for Postgres migrations across multiple databases, deployed to a
+local [kind](https://kind.sigs.k8s.io/) cluster via ArgoCD. Each database is
+a directory under `db/`. A single ApplicationSet discovers databases by
+scanning `db/*` and templates one ArgoCD Application per database. Each
+Application owns both the per-db Postgres and the migrate Job; sync waves
+order them (postgres first, Job second).
+
+Migration tooling per db:
+
+- `db/<name>/migrations/` present → [Atlas](https://atlasgo.io/), built from
+  the top-level `Dockerfile` (image `atlas-<name>:dev`).
+- No `migrations/` → the migrate Job pulls a separate image, typically built
+  from a sibling python service under `python/<service>/`. The Job's
+  `image:` field names the service; ImageUpdater would track new tags in a
+  real deployment.
 
 ## Layout conventions
 
-- `db/<name>/migrations/` — Atlas migrations + `atlas.sum`.
-- `db/<name>/k8s/resources/` — raw manifests (CNPG `Cluster` CR, atlas
-  migrate Job, ServiceAccount). No `kustomization.yaml` here; the overlay
-  enumerates the files directly.
+- `db/<name>/migrations/` — Atlas migrations + `atlas.sum` (omit for python-image dbs).
+- `db/<name>/k8s/resources/` — raw manifests (CNPG `Cluster` CR, migrate Job,
+  ServiceAccount). No `kustomization.yaml` here; the overlay enumerates the
+  files directly.
 - `db/<name>/k8s/overlays/production/kustomization.yaml` — lists resources
   and applies any per-db patches. `DATABASE_URL` for the migrate Job comes
   from the operator-managed `<name>-app` Secret (`uri` key); no ConfigMap
   generation needed.
+- `python/<service>/` — uv-managed Python package whose Dockerfile produces
+  the image used by one or more migrate Jobs (e.g. `python/api` produces
+  `api:dev`, used by `db/db-alembic`'s Job to run `alembic upgrade head`).
 
 Per-db overlays reference `../../resources/<file>.yaml` across kustomization
 roots, which requires `--load-restrictor LoadRestrictionsNone`. This is set
@@ -52,14 +63,15 @@ directory.
 ## Justfile is the entry point
 
 All cluster, build, and migration workflows go through `just`. Targets are
-idempotent. See `PLAN.md` for the target table. Cluster lifecycle is `just up`
+idempotent. Run `just` (no args) for the list. Cluster lifecycle is `just up`
 and `just down`.
 
 ## Local-only assumptions
 
 - Single kind cluster named `atlas-local`.
-- Per-db images are built locally and loaded into the cluster via
-  `kind load docker-image`. No registry.
+- All images (atlas + python) are built locally by `just build` and loaded
+  into the cluster via `kind load docker-image`. No registry. ImageUpdater
+  is the production story for python-image dbs and is out of scope here.
 - Only a `production` overlay exists. Add others later if needed.
 - Postgres credentials are hardcoded in the production overlays; revisit if
   this ever leaves the playground.
