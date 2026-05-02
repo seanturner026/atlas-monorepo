@@ -48,9 +48,9 @@ db/
 k8s/
   cluster/
     production/
-      app.yaml                     App-of-Apps → syncs k8s/apps/
+      app.yaml                     App-of-Apps → syncs k8s/cluster/production
+      kustomization.yaml           includes argocd/ and database-sets/
   apps/
-    kustomization.yaml             includes argocd/ and database-sets/
     argocd/                        self-managed ArgoCD install (also used for the manual bootstrap)
       resources/
         kustomization.yaml         references upstream ArgoCD manifests at a pinned tag
@@ -65,9 +65,9 @@ k8s/
 
 ```
 root-app  (k8s/cluster/production/app.yaml)
-└── k8s/apps/                              kustomization.yaml includes both children
-    ├── argocd/                            self-management of the ArgoCD install
-    └── database-sets/                     ApplicationSet, generator: git directories over db/*
+└── k8s/cluster/production/                kustomization.yaml pulls in both children from k8s/apps/
+    ├── argocd/                            self-management of the ArgoCD install (k8s/apps/argocd/)
+    └── database-sets/                     ApplicationSet (k8s/apps/database-sets/), generator: git directories over db/*
         ├── App "db1"             →  db/db1/k8s/overlays/production
         │   ├── postgres StatefulSet / Service / PVC      (sync-wave "0")
         │   └── atlas migrate Job + SA + ConfigMap         (sync-wave "1")

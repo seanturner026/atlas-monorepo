@@ -4,15 +4,12 @@ KIND_CLUSTER := "atlas-local"
 ATLAS_IMAGE := "arigaio/atlas:latest"
 ATLAS := 'docker run --rm --user "$(id -u):$(id -g)" -v "$PWD":/repo -w /repo arigaio/atlas:latest'
 
-# default
-# ---
-
+[private]
 default:
     just --list --alias-style left --list-heading ''
 
 # cluster
-# ---
-
+# -------------------------------------------------------------------
 [doc('Bring up the kind cluster, install ArgoCD, apply the root App. Idempotent.')]
 [group('cluster')]
 up:
@@ -46,8 +43,7 @@ argocd-ui: argocd-password
     kubectl port-forward svc/argocd-server -n argocd 8080:443
 
 # db
-# ---
-
+# -------------------------------------------------------------------
 [doc('Scaffold a new database directory under db/<NAME>/.')]
 [group('db')]
 new NAME:
@@ -64,8 +60,7 @@ new NAME:
     echo "scaffolded db/{{ NAME }} — copy resources/ + overlays/production/ from db/db1/ as a starting point"
 
 # migrate
-# ---
-
+# -------------------------------------------------------------------
 [doc('Create a new migration file under db/<SVC>/migrations.')]
 [group('migrate')]
 migrate-new SVC NAME:
@@ -82,8 +77,7 @@ migrate-lint SVC:
     atlas migrate lint --dir file://db/{{ SVC }}/migrations --dev-url docker://postgres/16/dev
 
 # build
-# ---
-
+# -------------------------------------------------------------------
 [doc('Build per-db images and load into kind. Pass SVC to limit, omit to build all dbs.')]
 [group('build')]
 build SVC='':

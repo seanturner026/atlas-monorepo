@@ -4,16 +4,22 @@ kind: Kustomization
 namespace: db1
 
 resources:
-  - ../../resources/statefulset.yaml
+  - ../../resources/job.yaml
   - ../../resources/service.yaml
   - ../../resources/serviceaccount.yaml
-  - ../../resources/job.yaml
+  - ../../resources/statefulset.yaml
 
 generatorOptions:
   disableNameSuffixHash: true
 
 configMapGenerator:
-  - name: db1-atlas-config
+  - name: atlas-config
     literals:
-      - DATABASE_URL=postgres://postgres:postgres@db1-postgres.db1.svc.cluster.local:5432/db1?sslmode=disable
       - ATLAS_ENV=default
+      - DATABASE_URL=postgres://postgres:postgres@db1-postgres.db1.svc.cluster.local:5432/db1?sslmode=disable
+  - name: postgres-config
+    literals:
+      - PGDATA=/var/lib/postgresql/data/pgdata
+      - POSTGRES_DB=db1
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_USER=postgres

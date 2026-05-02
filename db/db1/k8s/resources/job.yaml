@@ -16,4 +16,4 @@ spec:
           imagePullPolicy: IfNotPresent
           envFrom:
             - configMapRef:
-                name: db1-atlas-config
+                name: atlas-config
