@@ -6,7 +6,7 @@ readme = "README.md"
 authors = [
     { name = "Sean Turner", email = "sean.turner026@gmail.com" }
 ]
-requires-python = ">=3.13"
+requires-python = ">=3.12"
 dependencies = [
     "alembic>=1.18.4",
     "psycopg[binary]>=3.3.4",

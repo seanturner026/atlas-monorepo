@@ -1,6 +1,5 @@
-FROM python:3.13-slim AS build
-
-RUN pip install --no-cache-dir uv
+FROM python:3.12-slim-trixie AS build
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
 WORKDIR /app
@@ -15,7 +14,7 @@ COPY alembic/ alembic/
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev
 
-FROM python:3.13-slim
+FROM python:3.12-slim-trixie
 
 WORKDIR /app
 COPY --from=build /app /app
