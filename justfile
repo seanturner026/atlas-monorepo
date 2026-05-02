@@ -68,7 +68,7 @@ new NAME:
       "db/{{ NAME }}/migrations" \
       "db/{{ NAME }}/k8s/resources" \
       "db/{{ NAME }}/k8s/overlays/production"
-    echo "scaffolded db/{{ NAME }} — copy resources/ + overlays/production/ from db/db1/ as a starting point"
+    echo "scaffolded db/{{ NAME }} — copy resources/ + overlays/production/ from db/db-sql/ as a starting point"
 
 # migrate
 # -------------------------------------------------------------------

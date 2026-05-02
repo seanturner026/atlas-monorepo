@@ -12,11 +12,11 @@ spec:
       restartPolicy: OnFailure
       containers:
         - name: atlas
-          image: atlas-db1:dev
+          image: atlas-db-sql:dev
           imagePullPolicy: IfNotPresent
           env:
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
-                  name: db1-app
+                  name: db-sql-app
                   key: uri

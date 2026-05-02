@@ -84,6 +84,6 @@ and `just down`.
 - Alphabetize multi-line lists where order doesn't affect behavior — kustomization
   `resources:`, `patches:`, generator literals, etc.
 - Don't prefix resource names with their namespace. Each db has its own namespace,
-  so `db1/atlas` and `db1/migrate` rather than `db1/db1-atlas` and `db1/db1-migrate`.
-  CNPG-generated names (`db1-app`, `db1-rw`, `db1-1`) derive from the Cluster name
-  and stay as the operator emits them.
+  so `db-sql/atlas` and `db-sql/migrate` rather than `db-sql/db-sql-atlas` and
+  `db-sql/db-sql-migrate`. CNPG-generated names (`db-sql-app`, `db-sql-rw`,
+  `db-sql-1`) derive from the Cluster name and stay as the operator emits them.
