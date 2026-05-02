@@ -71,3 +71,7 @@ and `just down`.
 - Don't introduce abstractions beyond what's needed for the dbs that exist.
 - Alphabetize multi-line lists where order doesn't affect behavior — kustomization
   `resources:`, `patches:`, generator literals, etc.
+- Don't prefix resource names with their namespace. Each db has its own namespace,
+  so `db1/atlas` and `db1/migrate` rather than `db1/db1-atlas` and `db1/db1-migrate`.
+  CNPG-generated names (`db1-app`, `db1-rw`, `db1-1`) derive from the Cluster name
+  and stay as the operator emits them.
