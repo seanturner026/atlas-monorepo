@@ -1,2 +1,5 @@
-h1:Ed1m9FdeLARxGY20c6rKMa2klndtCuJ42McJ1/cF0/0=
+h1:x3dwcQe+MHTsadP12PGsbVS8VWHUIdlqc+AJdK1OwsQ=
 20260502120000_init.sql h1:Z+ec2MPMaQwxGVRorBLxt3LwRvbu6r+YoFV9gLBS+0A=
+20260502201141_add_widgets_description.sql h1:rg5JcWMGZxJx/HrnSq3yLrDKtrdwiLftY0Q31rKFtaw=
+20260502201143_add_widget_tags.sql h1:rvh4XNYI7KXGegNqxilfBtcv+/uo64v9myzdIslWPjo=
+20260502201144_add_widgets_name_idx.sql h1:Rz1iH315/DCy6nYSg9iUY5bSTPR4PyKSSAsPNxv/b2Q=
