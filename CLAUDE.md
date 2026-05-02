@@ -65,3 +65,5 @@ and `just down`.
 - No comments in code unless a non-obvious *why* is needed.
 - Don't add backwards-compatibility shims — this is a greenfield repo.
 - Don't introduce abstractions beyond what's needed for the dbs that exist.
+- Alphabetize multi-line lists where order doesn't affect behavior — kustomization
+  `resources:`, `patches:`, generator literals, etc.

@@ -14,6 +14,9 @@ spec:
         - name: atlas
           image: atlas-db1:dev
           imagePullPolicy: IfNotPresent
-          envFrom:
-            - configMapRef:
-                name: atlas-config
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: db1-app
+                  key: uri
