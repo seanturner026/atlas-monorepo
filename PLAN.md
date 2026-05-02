@@ -152,22 +152,24 @@ Specific changes:
 
 ## Implementation order
 
-1. Skeleton: `atlas.hcl`, `Dockerfile`, `justfile`, `.gitignore`, one
-   `db/db1/migrations/` with a trivial init migration + `atlas.sum`.
-2. Per-db k8s for `db1` (resources/ + overlays/production), with sync-wave
-   annotations so postgres precedes the migrate Job.
-3. `k8s/apps/argocd/` install kustomize, plus `up` / `down` justfile targets.
-   Verify ArgoCD comes up cleanly.
-4. App-of-apps (`k8s/cluster/production/app.yaml`, `k8s/apps/kustomization.yaml`)
-   plus self-management of argocd.
-5. The `database-sets` ApplicationSet, with `db1` as the only target.
-6. `just new some-other-db` to confirm a fresh dir produces a new ArgoCD
-   Application with no top-level edits.
+- [x] Skeleton: `atlas.hcl`, `Dockerfile`, `justfile`, `.gitignore`, one
+  `db/db1/migrations/` with a trivial init migration + `atlas.sum`.
+- [x] Per-db k8s for `db1` (resources/ + overlays/production), with sync-wave
+  annotations so postgres precedes the migrate Job.
+- [x] `k8s/apps/argocd/` install kustomize, plus `up` / `down` justfile targets.
+- [ ] Verify ArgoCD comes up cleanly via `just up` against a real kind cluster.
+- [x] App-of-apps (`k8s/cluster/production/app.yaml` + `kustomization.yaml`)
+  plus self-management of argocd.
+- [x] The `database-sets` ApplicationSet, with `db1` as the only target.
+- [ ] `just new some-other-db` to confirm a fresh dir produces a new ArgoCD
+  Application with no top-level edits.
+- [ ] Replace the hand-rolled per-db postgres StatefulSet with a postgres
+  operator (likely CloudNative-PG) and a single per-db `Cluster` CR.
 
 ## Open questions
 
-- ArgoCD version to pin to.
-- Postgres image/version (default to `postgres:16`).
-- Final image base: `scratch` vs `distroless/static:nonroot`.
+- ArgoCD version pin: **v3.3.9**.
+- Postgres image/version: **`postgres:16`** (revisit once the operator lands).
+- Final image base: **`gcr.io/distroless/static:nonroot`**.
 - Migration credential strategy: hardcoded in the production overlay for now;
-  revisit if/when this leaves the playground.
+  revisit when adopting the postgres operator (operator-managed Secret).

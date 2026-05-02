@@ -1,8 +1,6 @@
 set quiet
 
 KIND_CLUSTER := "atlas-local"
-ATLAS_IMAGE := "arigaio/atlas:latest"
-ATLAS := 'docker run --rm --user "$(id -u):$(id -g)" -v "$PWD":/repo -w /repo arigaio/atlas:latest'
 
 [private]
 default:
@@ -64,14 +62,14 @@ new NAME:
 [doc('Create a new migration file under db/<SVC>/migrations.')]
 [group('migrate')]
 migrate-new SVC NAME:
-    {{ ATLAS }} migrate new --dir file://db/{{ SVC }}/migrations {{ NAME }}
+    atlas migrate new --dir file://db/{{ SVC }}/migrations {{ NAME }}
 
 [doc('Recompute atlas.sum for db/<SVC>/migrations.')]
 [group('migrate')]
 migrate-hash SVC:
-    {{ ATLAS }} migrate hash --dir file://db/{{ SVC }}/migrations
+    atlas migrate hash --dir file://db/{{ SVC }}/migrations
 
-[doc('Lint migrations. Requires atlas installed locally (brew install ariga/tap/atlas) — needs docker-in-docker for the dev container.')]
+[doc('Lint migrations against an ephemeral postgres dev container.')]
 [group('migrate')]
 migrate-lint SVC:
     atlas migrate lint --dir file://db/{{ SVC }}/migrations --dev-url docker://postgres/16/dev
