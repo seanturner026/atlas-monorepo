@@ -57,6 +57,12 @@ k8s/
       overlays/
         production/
           kustomization.yaml
+    cnpg/                          (planned) CloudNative-PG operator install, same resources/+overlays/ shape
+      resources/
+        kustomization.yaml
+      overlays/
+        production/
+          kustomization.yaml
     database-sets/                 single ApplicationSet over db/*
       appset.yaml
 ```
@@ -163,8 +169,10 @@ Specific changes:
 - [x] The `database-sets` ApplicationSet, with `db1` as the only target.
 - [ ] `just new some-other-db` to confirm a fresh dir produces a new ArgoCD
   Application with no top-level edits.
-- [ ] Replace the hand-rolled per-db postgres StatefulSet with a postgres
-  operator (likely CloudNative-PG) and a single per-db `Cluster` CR.
+- [ ] Add the postgres operator (likely CloudNative-PG) as `k8s/apps/cnpg/`
+  (resources/ + overlays/production/, same shape as `argocd/`), wire it into
+  `k8s/cluster/production/kustomization.yaml`, and replace the per-db
+  StatefulSet/Service/PVC with a single `Cluster` CR per `db/<name>/`.
 
 ## Open questions
 
