@@ -4,3 +4,4 @@ kind: Kustomization
 resources:
   - ../../apps/argocd/overlays/production
   - ../../apps/database-sets/appset.yaml
+  - ../../apps/postgres/overlays/production
