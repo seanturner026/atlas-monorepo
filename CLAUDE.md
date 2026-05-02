@@ -15,25 +15,29 @@ second).
 ## Layout conventions
 
 - `db/<name>/migrations/` — Atlas migrations + `atlas.sum`.
-- `db/<name>/k8s/resources/` — raw manifests (Job, ServiceAccount, postgres
-  StatefulSet/Service/PVC). No `kustomization.yaml` here; the overlay
+- `db/<name>/k8s/resources/` — raw manifests (CNPG `Cluster` CR, atlas
+  migrate Job, ServiceAccount). No `kustomization.yaml` here; the overlay
   enumerates the files directly.
-- `db/<name>/k8s/overlays/production/kustomization.yaml` — lists resources,
-  generates the atlas ConfigMap (`DATABASE_URL`, `ATLAS_ENV`), applies
-  per-db patches.
+- `db/<name>/k8s/overlays/production/kustomization.yaml` — lists resources
+  and applies any per-db patches. `DATABASE_URL` for the migrate Job comes
+  from the operator-managed `<name>-app` Secret (`uri` key); no ConfigMap
+  generation needed.
 
-Overlays cross kustomization roots in two places: per-db overlays reference
-`../../resources/<file>.yaml`, and `k8s/cluster/production/kustomization.yaml`
-references `../../apps/...`. Both need `--load-restrictor LoadRestrictionsNone`.
-This is set globally for ArgoCD via `kustomize.buildOptions` in the
-`argocd-cm` ConfigMap (patched by `k8s/apps/argocd/overlays/production/kustomization.yaml`);
-local `kustomize build` invocations need to pass the flag explicitly.
-- `k8s/cluster/production/app.yaml` — App-of-Apps root (applied by `just up`).
-- `k8s/cluster/production/kustomization.yaml` — what the root App syncs;
-  pulls in the argocd install and the database-sets ApplicationSet.
+Per-db overlays reference `../../resources/<file>.yaml` across kustomization
+roots, which requires `--load-restrictor LoadRestrictionsNone`. This is set
+globally for ArgoCD via `kustomize.buildOptions` in the `argocd-cm` ConfigMap
+(patched by `k8s/apps/argocd/overlays/production/kustomization.yaml`); local
+`kustomize build` invocations need to pass the flag explicitly.
+
+- `k8s/apps/applications/app.yaml` — bootstrap Application applied by `just up`.
+- `k8s/apps/applications/overlays/production/appset.yaml` — `applications`
+  ApplicationSet that templates one Application per `k8s/apps/*/overlays/production`
+  (excluding itself), so adding a new app is just a new directory.
 - `k8s/apps/argocd/` — self-managed ArgoCD install (also used for the manual
   bootstrap).
-- `k8s/apps/database-sets/appset.yaml` — the single ApplicationSet over `db/*`.
+- `k8s/apps/database-sets/overlays/production/appset.yaml` — `databases`
+  ApplicationSet over `db/*`.
+- `k8s/apps/postgres/` — CloudNative-PG operator install.
 
 File naming: ArgoCD `Application` manifests are `app.yaml`; ArgoCD
 `ApplicationSet` manifests are `appset.yaml`.
