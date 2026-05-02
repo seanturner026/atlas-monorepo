@@ -1,0 +1,19 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db1-migrate
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  backoffLimit: 3
+  template:
+    spec:
+      serviceAccountName: db1-atlas
+      restartPolicy: OnFailure
+      containers:
+        - name: atlas
+          image: atlas-db1:dev
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: atlas-config

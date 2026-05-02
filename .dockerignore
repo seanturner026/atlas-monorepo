@@ -1,0 +1,10 @@
+.git
+.gitignore
+.dockerignore
+.context/
+k8s/
+justfile
+PLAN.md
+CLAUDE.md
+README.md
+*.md

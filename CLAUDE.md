@@ -21,7 +21,16 @@ second).
 - `db/<name>/k8s/overlays/production/kustomization.yaml` — lists resources,
   generates the atlas ConfigMap (`DATABASE_URL`, `ATLAS_ENV`), applies
   per-db patches.
-- `k8s/cluster/production/app.yaml` — App-of-Apps root.
+
+Overlays cross kustomization roots in two places: per-db overlays reference
+`../../resources/<file>.yaml`, and `k8s/cluster/production/kustomization.yaml`
+references `../../apps/...`. Both need `--load-restrictor LoadRestrictionsNone`.
+This is set globally for ArgoCD via `kustomize.buildOptions` in the
+`argocd-cm` ConfigMap (patched by `k8s/apps/argocd/overlays/production/kustomization.yaml`);
+local `kustomize build` invocations need to pass the flag explicitly.
+- `k8s/cluster/production/app.yaml` — App-of-Apps root (applied by `just up`).
+- `k8s/cluster/production/kustomization.yaml` — what the root App syncs;
+  pulls in the argocd install and the database-sets ApplicationSet.
 - `k8s/apps/argocd/` — self-managed ArgoCD install (also used for the manual
   bootstrap).
 - `k8s/apps/database-sets/appset.yaml` — the single ApplicationSet over `db/*`.
