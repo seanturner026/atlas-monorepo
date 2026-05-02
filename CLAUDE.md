@@ -46,7 +46,7 @@ globally for ArgoCD via `kustomize.buildOptions` in the `argocd-cm` ConfigMap
   (excluding itself), so adding a new app is just a new directory.
 - `k8s/apps/argocd/` — self-managed ArgoCD install (also used for the manual
   bootstrap).
-- `k8s/apps/database-sets/overlays/production/appset.yaml` — `databases`
+- `k8s/apps/databases/overlays/production/appset.yaml` — `databases`
   ApplicationSet over `db/*`.
 - `k8s/apps/postgres/` — CloudNative-PG operator install.
 
