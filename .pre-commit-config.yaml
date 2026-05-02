@@ -1,0 +1,9 @@
+repos:
+  - repo: local
+    hooks:
+      - id: atlas-migrate-validate
+        name: atlas migrate validate
+        entry: bash -c 'set -euo pipefail; for d in db/*/migrations; do [ -d "$d" ] || continue; atlas migrate validate --dir "file://$d"; done'
+        language: system
+        pass_filenames: false
+        files: ^db/[^/]+/migrations/.*$

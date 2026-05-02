@@ -14,6 +14,7 @@ migrate Job second.
 - [just](https://github.com/casey/just)
 - [kind](https://kind.sigs.k8s.io/)
 - [kubectl](https://kubernetes.io/docs/tasks/tools/)
+- [pre-commit](https://pre-commit.com/) — run `pre-commit install` once after cloning
 
 ## Quickstart
 
@@ -30,6 +31,10 @@ Run `just` with no args for the full recipe list.
 ```sh
 just n <svc> <name>  # create a new migration file (alias for `new`)
 ```
+
+After editing a migration's SQL, run `atlas migrate hash --dir file://db/<svc>/migrations`
+to refresh `atlas.sum`. The `atlas-migrate-validate` pre-commit hook blocks commits
+with a stale sum.
 
 ## Layout
 
