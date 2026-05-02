@@ -40,7 +40,7 @@ globally for ArgoCD via `kustomize.buildOptions` in the `argocd-cm` ConfigMap
 (patched by `k8s/apps/argocd/overlays/production/kustomization.yaml`); local
 `kustomize build` invocations need to pass the flag explicitly.
 
-- `k8s/apps/applications/app.yaml` — bootstrap Application applied by `just up`.
+- `k8s/apps/applications/overlays/production/app.yaml` — bootstrap Application applied by `just up`.
 - `k8s/apps/applications/overlays/production/appset.yaml` — `applications`
   ApplicationSet that templates one Application per `k8s/apps/*/overlays/production`
   (excluding itself), so adding a new app is just a new directory.
