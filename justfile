@@ -89,21 +89,21 @@ migrate-lint SVC:
 
 # build
 # -------------------------------------------------------------------
-[doc('Build per-db images and load into kind. Pass SVC to limit, omit to build all dbs.')]
+[doc('Build all per-db and python service images and load into kind.')]
 [group('build')]
-build SVC='':
+build:
     #!/usr/bin/env bash
     set -euo pipefail
-    if [ -n "{{ SVC }}" ]; then
-      services=("{{ SVC }}")
-    else
-      services=()
-      for d in db/*/; do
-        services+=("$(basename "$d")")
-      done
-    fi
-    for svc in "${services[@]}"; do
+    for d in db/*/migrations; do
+      [ -d "$d" ] || continue
+      svc=$(basename "$(dirname "$d")")
       echo ">> building atlas-${svc}:dev"
       docker build --build-arg "SERVICE_NAME=${svc}" -t "atlas-${svc}:dev" .
       kind load docker-image "atlas-${svc}:dev" --name "{{ KIND_CLUSTER }}"
+    done
+    for d in python/*/; do
+      svc=$(basename "$d")
+      echo ">> building ${svc}:dev"
+      docker build -t "${svc}:dev" "python/${svc}"
+      kind load docker-image "${svc}:dev" --name "{{ KIND_CLUSTER }}"
     done
