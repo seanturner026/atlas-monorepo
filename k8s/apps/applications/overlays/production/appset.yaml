@@ -1,0 +1,33 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: applications
+  namespace: argocd
+spec:
+  generators:
+    - git:
+        repoURL: https://github.com/seanturner026/atlas-monorepo.git
+        revision: main
+        directories:
+          - path: k8s/apps/*/overlays/production
+          - path: k8s/apps/applications/overlays/production
+            exclude: true
+  template:
+    metadata:
+      name: "{{path[2]}}"
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/seanturner026/atlas-monorepo.git
+        targetRevision: main
+        path: "{{path}}"
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: argocd
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true

@@ -12,7 +12,7 @@ spec:
           - path: db/*
   template:
     metadata:
-      name: "db-{{path.basename}}"
+      name: "{{path.basename}}"
     spec:
       project: default
       source:

@@ -33,58 +33,61 @@ db/
       atlas.sum
     k8s/
       resources/                   raw manifests, no kustomization.yaml here
-        job.yaml                   atlas migrate apply Job        (sync-wave "1")
+        cluster.yaml               CNPG Cluster CR              (sync-wave "0")
+        job.yaml                   atlas migrate apply Job      (sync-wave "1")
         serviceaccount.yaml
-        statefulset.yaml           postgres StatefulSet           (sync-wave "0")
-        service.yaml               postgres Service
-        pvc.yaml                   postgres PVC
       overlays/
         production/
-          kustomization.yaml       enumerates the resource files, generates the
-                                   atlas ConfigMap (DATABASE_URL, ATLAS_ENV),
-                                   applies any per-db patches
+          kustomization.yaml       enumerates the resource files, applies any
+                                   per-db patches; DATABASE_URL is sourced from
+                                   the operator-managed <name>-app Secret
   some-other-db/                   mirrors db1/ — proves the AppSet picks up new dbs
 
 k8s/
-  cluster/
-    production/
-      app.yaml                     App-of-Apps → syncs k8s/cluster/production
-      kustomization.yaml           includes argocd/ and database-sets/
   apps/
+    applications/                  bootstrap + meta ApplicationSet
+      app.yaml                     applied by `just up`; manages the appset below
+      overlays/
+        production/
+          appset.yaml              templates one App per k8s/apps/*/overlays/production
+          kustomization.yaml
     argocd/                        self-managed ArgoCD install (also used for the manual bootstrap)
       resources/
         kustomization.yaml         references upstream ArgoCD manifests at a pinned tag
       overlays/
         production/
           kustomization.yaml
-    postgres/                      (planned) CloudNative-PG operator install, same resources/+overlays/ shape
+    database-sets/                 ApplicationSet over db/*
+      overlays/
+        production/
+          appset.yaml
+          kustomization.yaml
+    postgres/                      CloudNative-PG operator install
       resources/
-        kustomization.yaml
+        kustomization.yaml         references upstream CNPG release manifest at a pinned version
       overlays/
         production/
           kustomization.yaml
-    database-sets/                 single ApplicationSet over db/*
-      appset.yaml
 ```
 
 ## ArgoCD topology
 
 ```
-root-app  (k8s/cluster/production/app.yaml)
-└── k8s/cluster/production/                kustomization.yaml pulls in both children from k8s/apps/
-    ├── argocd/                            self-management of the ArgoCD install (k8s/apps/argocd/)
-    └── database-sets/                     ApplicationSet (k8s/apps/database-sets/), generator: git directories over db/*
-        ├── App "db1"             →  db/db1/k8s/overlays/production
-        │   ├── postgres StatefulSet / Service / PVC      (sync-wave "0")
-        │   └── atlas migrate Job + SA + ConfigMap         (sync-wave "1")
-        └── App "some-other-db"   →  db/some-other-db/k8s/overlays/production
-            ├── postgres …
-            └── atlas …
+applications  (Application, k8s/apps/applications/app.yaml — applied by `just up`)
+└── applications  (ApplicationSet, k8s/apps/applications/overlays/production/appset.yaml)
+    ├── App "argocd"          →  k8s/apps/argocd/overlays/production           (self-management)
+    ├── App "database-sets"   →  k8s/apps/database-sets/overlays/production    (the per-db AppSet)
+    │   └── databases  (ApplicationSet, generator: git directories over db/*)
+    │       ├── App "db1"           →  db/db1/k8s/overlays/production
+    │       │   ├── CNPG Cluster CR                (sync-wave "0")
+    │       │   └── atlas migrate Job + SA          (sync-wave "1")
+    │       └── App "some-other-db" →  db/some-other-db/k8s/overlays/production
+    └── App "postgres"        →  k8s/apps/postgres/overlays/production         (CNPG operator)
 ```
 
 ArgoCD is installed manually once (`just up`) from `k8s/apps/argocd/` and then
-managed by the same path via the root App, so future ArgoCD upgrades are
-GitOps-driven.
+managed by the same path via the `argocd` Application, so future ArgoCD
+upgrades are GitOps-driven.
 
 ## atlas.hcl
 
@@ -163,21 +166,17 @@ Specific changes:
 - [x] Per-db k8s for `db1` (resources/ + overlays/production), with sync-wave
   annotations so postgres precedes the migrate Job.
 - [x] `k8s/apps/argocd/` install kustomize, plus `up` / `down` justfile targets.
-- [ ] Verify ArgoCD comes up cleanly via `just up` against a real kind cluster.
-- [x] App-of-apps (`k8s/cluster/production/app.yaml` + `kustomization.yaml`)
-  plus self-management of argocd.
+- [x] Verify ArgoCD comes up cleanly via `just up` against a real kind cluster.
+- [x] `applications` Application + ApplicationSet (`k8s/apps/applications/`)
+  bootstraps and self-manages all sibling apps.
 - [x] The `database-sets` ApplicationSet, with `db1` as the only target.
 - [ ] `just new some-other-db` to confirm a fresh dir produces a new ArgoCD
   Application with no top-level edits.
-- [ ] Add the postgres operator (likely CloudNative-PG) as `k8s/apps/postgres/`
-  (resources/ + overlays/production/, same shape as `argocd/`), wire it into
-  `k8s/cluster/production/kustomization.yaml`, and replace the per-db
-  StatefulSet/Service/PVC with a single `Cluster` CR per `db/<name>/`.
+- [x] Add the CloudNative-PG operator as `k8s/apps/postgres/` and replace the
+  per-db StatefulSet/Service/PVC with a single `Cluster` CR per `db/<name>/`.
 
 ## Open questions
 
 - ArgoCD version pin: **v3.3.9**.
-- Postgres image/version: **`postgres:16`** (revisit once the operator lands).
+- CloudNative-PG version pin: **v1.29.0**.
 - Final image base: **`gcr.io/distroless/static:nonroot`**.
-- Migration credential strategy: hardcoded in the production overlay for now;
-  revisit when adopting the postgres operator (operator-managed Secret).
