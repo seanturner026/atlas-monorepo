@@ -5,7 +5,6 @@ KIND_CLUSTER := "atlas-local"
 alias au := argocd-ui
 alias b := build
 alias d := down
-alias n := new
 alias u := up
 
 [private]
@@ -35,8 +34,7 @@ up:
 down:
     kind delete cluster --name "{{ KIND_CLUSTER }}"
 
-[doc('Print the ArgoCD initial admin password.')]
-[group('cluster')]
+[private]
 argocd-password:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -52,23 +50,6 @@ argocd-ui:
     echo "admin password is ${password}"
     echo "https://localhost:8080"
     kubectl port-forward svc/argocd-server -n argocd 8080:443
-
-# db
-# -------------------------------------------------------------------
-[doc('Scaffold a new database directory under db/<NAME>/.')]
-[group('db')]
-new NAME:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    if [ -e "db/{{ NAME }}" ]; then
-      echo "db/{{ NAME }} already exists" >&2
-      exit 1
-    fi
-    mkdir -p \
-      "db/{{ NAME }}/migrations" \
-      "db/{{ NAME }}/k8s/resources" \
-      "db/{{ NAME }}/k8s/overlays/production"
-    echo "scaffolded db/{{ NAME }} — copy resources/ + overlays/production/ from db/db-sql/ as a starting point"
 
 # migrate
 # -------------------------------------------------------------------

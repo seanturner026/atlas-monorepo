@@ -56,9 +56,10 @@ File naming: ArgoCD `Application` manifests are `app.yaml`; ArgoCD
 
 ## Adding a new database
 
-`just new <name>` scaffolds `db/<name>/{migrations,k8s/{resources,overlays/production}}`.
-The ApplicationSet picks it up automatically — no edits outside the new
-directory.
+Create `db/<name>/{migrations,k8s/{resources,overlays/production}}` (copy
+`resources/` and `overlays/production/` from `db/db-sql/` as a starting
+point). The ApplicationSet picks it up automatically — no edits outside the
+new directory.
 
 ## Justfile is the entry point
 
