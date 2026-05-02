@@ -5,6 +5,7 @@ KIND_CLUSTER := "atlas-local"
 alias au := argocd-ui
 alias b := build
 alias d := down
+alias h := hash
 alias n := new
 alias u := up
 
@@ -58,6 +59,11 @@ argocd-ui:
 [group('migrate')]
 new SVC NAME:
     atlas migrate new --dir file://db/{{ SVC }}/migrations {{ NAME }}
+
+[doc('Recompute atlas.sum for db/<SVC>/migrations after editing.')]
+[group('migrate')]
+hash SVC:
+    atlas migrate hash --dir file://db/{{ SVC }}/migrations
 
 # build
 # -------------------------------------------------------------------

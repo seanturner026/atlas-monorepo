@@ -29,6 +29,7 @@ Run `just` with no args for the full recipe list.
 
 ```sh
 just n <svc> <name>  # create a new migration file (alias for `new`)
+just h <svc>         # recompute atlas.sum after editing (alias for `hash`)
 ```
 
 ## Layout
