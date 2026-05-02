@@ -42,9 +42,14 @@ argocd-password:
     kubectl get secret argocd-initial-admin-secret -n argocd -o jsonpath='{.data.password}' | base64 --decode
     echo
 
-[doc('Print the admin password and port-forward argocd-server on https://localhost:8080.')]
+[doc('Print the admin URL + password, then port-forward argocd-server.')]
 [group('cluster')]
-argocd-ui: argocd-password
+argocd-ui:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    password=$(kubectl get secret argocd-initial-admin-secret -n argocd -o jsonpath='{.data.password}' | base64 --decode)
+    echo "admin password is ${password}"
+    echo "https://localhost:8080"
     kubectl port-forward svc/argocd-server -n argocd 8080:443
 
 # db
