@@ -1,0 +1,19 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: db1
+
+resources:
+  - ../../resources/statefulset.yaml
+  - ../../resources/service.yaml
+  - ../../resources/serviceaccount.yaml
+  - ../../resources/job.yaml
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+configMapGenerator:
+  - name: db1-atlas-config
+    literals:
+      - DATABASE_URL=postgres://postgres:postgres@db1-postgres.db1.svc.cluster.local:5432/db1?sslmode=disable
+      - ATLAS_ENV=default
