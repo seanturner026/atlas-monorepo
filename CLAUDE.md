@@ -21,10 +21,13 @@ second).
 - `db/<name>/k8s/overlays/production/kustomization.yaml` — lists resources,
   generates the atlas ConfigMap (`DATABASE_URL`, `ATLAS_ENV`), applies
   per-db patches.
-- `k8s/cluster/production/root-app.yaml` — App-of-Apps root.
+- `k8s/cluster/production/app.yaml` — App-of-Apps root.
 - `k8s/apps/argocd/` — self-managed ArgoCD install (also used for the manual
   bootstrap).
-- `k8s/apps/db-sets/` — the single ApplicationSet over `db/*`.
+- `k8s/apps/database-sets/appset.yaml` — the single ApplicationSet over `db/*`.
+
+File naming: ArgoCD `Application` manifests are `app.yaml`; ArgoCD
+`ApplicationSet` manifests are `appset.yaml`.
 - `atlas.hcl` and `Dockerfile` are shared at the repo root.
 
 ## Adding a new database

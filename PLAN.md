@@ -48,26 +48,26 @@ db/
 k8s/
   cluster/
     production/
-      root-app.yaml                App-of-Apps → syncs k8s/apps/
+      app.yaml                     App-of-Apps → syncs k8s/apps/
   apps/
-    kustomization.yaml             includes argocd/ and db-sets/
+    kustomization.yaml             includes argocd/ and database-sets/
     argocd/                        self-managed ArgoCD install (also used for the manual bootstrap)
       resources/
         kustomization.yaml         references upstream ArgoCD manifests at a pinned tag
       overlays/
         production/
           kustomization.yaml
-    db-sets/                       single ApplicationSet over db/*
+    database-sets/                 single ApplicationSet over db/*
       appset.yaml
 ```
 
 ## ArgoCD topology
 
 ```
-root-app  (k8s/cluster/production/root-app.yaml)
+root-app  (k8s/cluster/production/app.yaml)
 └── k8s/apps/                              kustomization.yaml includes both children
     ├── argocd/                            self-management of the ArgoCD install
-    └── db-sets/                           ApplicationSet, generator: git directories over db/*
+    └── database-sets/                     ApplicationSet, generator: git directories over db/*
         ├── App "db1"             →  db/db1/k8s/overlays/production
         │   ├── postgres StatefulSet / Service / PVC      (sync-wave "0")
         │   └── atlas migrate Job + SA + ConfigMap         (sync-wave "1")
@@ -158,9 +158,9 @@ Specific changes:
    annotations so postgres precedes the migrate Job.
 3. `k8s/apps/argocd/` install kustomize, plus `up` / `down` justfile targets.
    Verify ArgoCD comes up cleanly.
-4. App-of-apps (`k8s/cluster/production/root-app.yaml`, `k8s/apps/kustomization.yaml`)
+4. App-of-apps (`k8s/cluster/production/app.yaml`, `k8s/apps/kustomization.yaml`)
    plus self-management of argocd.
-5. The `db-sets` ApplicationSet, with `db1` as the only target.
+5. The `database-sets` ApplicationSet, with `db1` as the only target.
 6. `just new some-other-db` to confirm a fresh dir produces a new ArgoCD
    Application with no top-level edits.
 
