@@ -2,6 +2,12 @@ set quiet
 
 KIND_CLUSTER := "atlas-local"
 
+alias au := argocd-ui
+alias b := build
+alias d := down
+alias n := new
+alias u := up
+
 [private]
 default:
     just --list --alias-style left --list-heading ''
@@ -17,13 +23,15 @@ up:
       kind create cluster --name "{{ KIND_CLUSTER }}"
     fi
     kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
-    kustomize build k8s/apps/argocd/overlays/production | kubectl apply -f -
+    kustomize build k8s/apps/argocd/overlays/production | kubectl apply --server-side --force-conflicts -f -
     kubectl wait --for=condition=available --timeout=300s deploy/argocd-server -n argocd
+    just build
     kubectl apply -f k8s/cluster/production/app.yaml
+    kubectl config set-context --current --namespace=argocd
 
 [doc('Delete the kind cluster.')]
 [group('cluster')]
-[confirm('Delete kind cluster {{ KIND_CLUSTER }}?')]
+[confirm('Delete kind cluster atlas-local?')]
 down:
     kind delete cluster --name "{{ KIND_CLUSTER }}"
 
@@ -35,9 +43,14 @@ argocd-password:
     kubectl get secret argocd-initial-admin-secret -n argocd -o jsonpath='{.data.password}' | base64 --decode
     echo
 
-[doc('Print the admin password and port-forward argocd-server on https://localhost:8080.')]
+[doc('Print the admin URL + password, then port-forward argocd-server.')]
 [group('cluster')]
-argocd-ui: argocd-password
+argocd-ui:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    password=$(kubectl get secret argocd-initial-admin-secret -n argocd -o jsonpath='{.data.password}' | base64 --decode)
+    echo "admin password is ${password}"
+    echo "https://localhost:8080"
     kubectl port-forward svc/argocd-server -n argocd 8080:443
 
 # db
