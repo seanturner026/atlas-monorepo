@@ -2,6 +2,12 @@ set quiet
 
 KIND_CLUSTER := "atlas-local"
 
+alias au := argocd-ui
+alias b := build
+alias d := down
+alias n := new
+alias u := up
+
 [private]
 default:
     just --list --alias-style left --list-heading ''
@@ -20,10 +26,11 @@ up:
     kustomize build k8s/apps/argocd/overlays/production | kubectl apply --server-side --force-conflicts -f -
     kubectl wait --for=condition=available --timeout=300s deploy/argocd-server -n argocd
     kubectl apply -f k8s/cluster/production/app.yaml
+    kubectl config set-context --current --namespace=argocd
 
 [doc('Delete the kind cluster.')]
 [group('cluster')]
-[confirm('Delete kind cluster {{ KIND_CLUSTER }}?')]
+[confirm('Delete kind cluster atlas-local?')]
 down:
     kind delete cluster --name "{{ KIND_CLUSTER }}"
 
