@@ -25,6 +25,7 @@ up:
     kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
     kustomize build k8s/apps/argocd/overlays/production | kubectl apply --server-side --force-conflicts -f -
     kubectl wait --for=condition=available --timeout=300s deploy/argocd-server -n argocd
+    just build
     kubectl apply -f k8s/cluster/production/app.yaml
     kubectl config set-context --current --namespace=argocd
 
