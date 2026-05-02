@@ -6,34 +6,38 @@ Conventions and context for this repo. See `PLAN.md` for the full design.
 
 A monorepo for [Atlas](https://atlasgo.io/)-managed Postgres migrations across
 multiple databases, deployed to a local [kind](https://kind.sigs.k8s.io/)
-cluster via ArgoCD. Each database is a directory under `db/`. Two
-ApplicationSets discover databases by scanning `db/*` and template one
-ArgoCD Application per database for migrations and one for the postgres
-StatefulSet.
+cluster via ArgoCD. Each database is a directory under `db/`. A single
+ApplicationSet discovers databases by scanning `db/*` and templates one
+ArgoCD Application per database. Each Application owns both the per-db
+Postgres and the migrate Job; sync waves order them (postgres first, Job
+second).
 
 ## Layout conventions
 
 - `db/<name>/migrations/` — Atlas migrations + `atlas.sum`.
-- `db/<name>/k8s/atlas/{resources,overlays/production}` — migrate Job +
-  ServiceAccount, plus an overlay that creates the ConfigMap with
-  `DATABASE_URL` / `ATLAS_ENV` and patches the SA if needed.
-- `db/<name>/k8s/postgres/{resources,overlays/production}` — StatefulSet,
-  Service, PVC for the per-db Postgres.
-- `k8s/argocd/` — ArgoCD install (bootstrap only).
+- `db/<name>/k8s/resources/` — raw manifests (Job, ServiceAccount, postgres
+  StatefulSet/Service/PVC). No `kustomization.yaml` here; the overlay
+  enumerates the files directly.
+- `db/<name>/k8s/overlays/production/kustomization.yaml` — lists resources,
+  generates the atlas ConfigMap (`DATABASE_URL`, `ATLAS_ENV`), applies
+  per-db patches.
 - `k8s/cluster/production/root-app.yaml` — App-of-Apps root.
-- `k8s/apps/` — child Apps; both ApplicationSets live here.
+- `k8s/apps/argocd/` — self-managed ArgoCD install (also used for the manual
+  bootstrap).
+- `k8s/apps/db-sets/` — the single ApplicationSet over `db/*`.
 - `atlas.hcl` and `Dockerfile` are shared at the repo root.
 
 ## Adding a new database
 
-`just new-db <name>` scaffolds `db/<name>/{migrations,k8s/atlas,k8s/postgres}`.
-The two ApplicationSets pick it up automatically — no edits outside the new
+`just new <name>` scaffolds `db/<name>/{migrations,k8s/{resources,overlays/production}}`.
+The ApplicationSet picks it up automatically — no edits outside the new
 directory.
 
 ## Justfile is the entry point
 
 All cluster, build, and migration workflows go through `just`. Targets are
-idempotent. See `PLAN.md` for the target table.
+idempotent. See `PLAN.md` for the target table. Cluster lifecycle is `just up`
+and `just down`.
 
 ## Local-only assumptions
 

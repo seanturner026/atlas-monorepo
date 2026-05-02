@@ -8,8 +8,9 @@ using [Atlas](https://atlasgo.io/), deployed via ArgoCD onto a local
 
 - One repo, many databases. Each database is a directory under `db/`.
 - Adding a new database means adding a directory — no top-level edits.
-- All deploys driven by ArgoCD ApplicationSets that discover databases by
-  scanning `db/*`.
+- A single ArgoCD ApplicationSet discovers databases by scanning `db/*` and
+  templates one Application per database. Each Application owns both the
+  per-db Postgres and the migrate Job (sync waves order them).
 - Local-only playground: kind cluster, locally-built images loaded into the
   cluster (no registry).
 - A `justfile` is the single entry point for cluster, build, and migration
@@ -18,8 +19,8 @@ using [Atlas](https://atlasgo.io/), deployed via ArgoCD onto a local
 ## Repo layout
 
 ```
-atlas.hcl                          # shared, env-driven (ATLAS_ENV, DATABASE_URL)
-Dockerfile                         # shared, ARG SERVICE_NAME selects per-db migrations
+atlas.hcl                          shared, env-driven (ATLAS_ENV, DATABASE_URL)
+Dockerfile                         multi-stage: atlas binary copied into scratch (or distroless/static)
 justfile
 PLAN.md
 CLAUDE.md
@@ -31,58 +32,57 @@ db/
       20250115093000_init.sql
       atlas.sum
     k8s/
-      atlas/
-        resources/
-          kustomization.yaml
-          job.yaml                 # atlas migrate apply Job
-          serviceaccount.yaml
-        overlays/
-          production/
-            kustomization.yaml     # creates ConfigMap (DATABASE_URL, ATLAS_ENV), patches SA if needed
-      postgres/
-        resources/
-          kustomization.yaml
-          statefulset.yaml
-          service.yaml
-          pvc.yaml
-        overlays/
-          production/
-            kustomization.yaml
-  some-other-db/                   # mirrors db1/ — proves the AppSets pick up new dbs
+      resources/                   raw manifests, no kustomization.yaml here
+        job.yaml                   atlas migrate apply Job        (sync-wave "1")
+        serviceaccount.yaml
+        statefulset.yaml           postgres StatefulSet           (sync-wave "0")
+        service.yaml               postgres Service
+        pvc.yaml                   postgres PVC
+      overlays/
+        production/
+          kustomization.yaml       enumerates the resource files, generates the
+                                   atlas ConfigMap (DATABASE_URL, ATLAS_ENV),
+                                   applies any per-db patches
+  some-other-db/                   mirrors db1/ — proves the AppSet picks up new dbs
 
 k8s/
-  argocd/                          # bootstrap-only: ArgoCD install
-    resources/
-      kustomization.yaml           # references upstream ArgoCD manifests at a pinned tag
-    overlays/
-      production/
-        kustomization.yaml
   cluster/
     production/
-      root-app.yaml                # App-of-Apps → syncs k8s/apps/
+      root-app.yaml                App-of-Apps → syncs k8s/apps/
   apps/
-    kustomization.yaml
-    atlas-appset.yaml              # ApplicationSet over db/* → one App per db (atlas migrations)
-    postgres-appset.yaml           # ApplicationSet over db/* → one App per db (postgres)
+    kustomization.yaml             includes argocd/ and db-sets/
+    argocd/                        self-managed ArgoCD install (also used for the manual bootstrap)
+      resources/
+        kustomization.yaml         references upstream ArgoCD manifests at a pinned tag
+      overlays/
+        production/
+          kustomization.yaml
+    db-sets/                       single ApplicationSet over db/*
+      appset.yaml
 ```
 
 ## ArgoCD topology
 
 ```
-root-app (k8s/cluster/production/root-app.yaml)
-  └── k8s/apps/   (kustomization includes both AppSets)
-        ├── atlas-appset       → templates Application "atlas-<db>"   pointing at db/<db>/k8s/atlas/overlays/production
-        └── postgres-appset    → templates Application "postgres-<db>" pointing at db/<db>/k8s/postgres/overlays/production
+root-app  (k8s/cluster/production/root-app.yaml)
+└── k8s/apps/                              kustomization.yaml includes both children
+    ├── argocd/                            self-management of the ArgoCD install
+    └── db-sets/                           ApplicationSet, generator: git directories over db/*
+        ├── App "db1"             →  db/db1/k8s/overlays/production
+        │   ├── postgres StatefulSet / Service / PVC      (sync-wave "0")
+        │   └── atlas migrate Job + SA + ConfigMap         (sync-wave "1")
+        └── App "some-other-db"   →  db/some-other-db/k8s/overlays/production
+            ├── postgres …
+            └── atlas …
 ```
 
-Both AppSets use a `git: directories` generator over `db/*`. The template uses
-`{{path.basename}}` for the database name. Adding `db/foo/` with the expected
-subtree produces two new ArgoCD Applications automatically.
+ArgoCD is installed manually once (`just up`) from `k8s/apps/argocd/` and then
+managed by the same path via the root App, so future ArgoCD upgrades are
+GitOps-driven.
 
 ## atlas.hcl
 
-Single `env` block, env-var driven, so the same config works locally and in
-the migrate Job:
+Single `env`, env-var driven:
 
 ```hcl
 env "default" {
@@ -94,31 +94,38 @@ env "default" {
 
 ## Dockerfile
 
-Per-db image. `ARG SERVICE_NAME` selects which migrations get baked in:
+Multi-stage: pull the `atlas` binary out of the upstream image and put it in a
+minimal final layer. Scratch works because the binary is statically linked;
+`distroless/static` is the safer choice if anything ends up needing CA
+certificates.
 
 ```dockerfile
-FROM arigaio/atlas:latest
+FROM arigaio/atlas:latest AS atlas
+
+FROM gcr.io/distroless/static:nonroot
 ARG SERVICE_NAME
+COPY --from=atlas /atlas /atlas
 COPY atlas.hcl /atlas.hcl
 COPY db/${SERVICE_NAME}/migrations /migrations
-WORKDIR /
 ENTRYPOINT ["/atlas"]
 CMD ["migrate", "apply", "--config", "file:///atlas.hcl", "--env", "default"]
 ```
 
-Image tag convention: `atlas-<db>:dev`. Locally loaded into kind via
+Image tag convention: `atlas-<db>:dev`. Loaded into kind via
 `kind load docker-image`.
+
+Decision to confirm: scratch vs `distroless/static:nonroot`. Default to
+distroless until something forces it smaller.
 
 ## Justfile targets
 
 | Target              | Behavior                                                                 |
 |---------------------|--------------------------------------------------------------------------|
-| `init`              | Idempotent: create kind cluster if missing, install ArgoCD, apply root App |
-| `cluster-up`        | Just the kind + ArgoCD install half of `init`                            |
-| `cluster-down`      | `kind delete cluster --name atlas-local`                                 |
+| `up`                | Idempotent: create kind cluster if missing, install ArgoCD, apply root App |
+| `down`              | `kind delete cluster --name atlas-local`                                 |
 | `argocd-password`   | Print the initial admin password                                         |
 | `argocd-ui`         | Calls `argocd-password`, then port-forwards `argocd-server` on 8080      |
-| `new-db NAME`       | Scaffold `db/<NAME>/{migrations,k8s/atlas,k8s/postgres}` from templates  |
+| `new NAME`          | Scaffold `db/<NAME>/{migrations,k8s/{resources,overlays/production}}`    |
 | `migrate-new SVC NAME` | `atlas migrate new --dir file://db/$SVC/migrations $NAME`             |
 | `migrate-hash SVC`  | Refresh `atlas.sum`                                                      |
 | `migrate-lint SVC`  | `atlas migrate lint --dev-url docker://postgres/16/dev`                  |
@@ -130,35 +137,37 @@ The reference is
 [`seanturner026/argocd-applicationset/deploy.sh`](https://github.com/seanturner026/argocd-applicationset/blob/main/deploy.sh).
 Specific changes:
 
-- **Idempotent.** `kind get clusters | grep` before create. `kubectl apply` is
+- **Idempotent.** `kind get clusters | grep` before create; `kubectl apply` is
   already idempotent for namespaces and manifests.
 - **`kubectl wait` instead of polling for the secret.** Wait on
   `deploy/argocd-server` `condition=available`, single timeout, no bash loop.
 - **Pinned ArgoCD version.** Kustomize references upstream manifests at a
   specific tag, not `stable`.
-- **App-of-apps.** A single `kubectl apply` of the root App brings up postgres
-  + atlas; the script doesn't need to know about either.
-- **Port-forward separated.** `init` exits cleanly. `argocd-ui` is the
+- **App-of-apps + self-managing ArgoCD.** A single root manifest brings up
+  everything; future ArgoCD upgrades are GitOps changes, not script edits.
+- **Port-forward separated.** `up` exits cleanly; `argocd-ui` is the
   interactive target.
-- **`kind load docker-image` baked into `build`.** Locally-built per-db images
-  are visible to the cluster without a registry.
+- **`kind load docker-image` baked into `build`.** Locally-built per-db
+  images are visible to the cluster without a registry.
 
 ## Implementation order
 
 1. Skeleton: `atlas.hcl`, `Dockerfile`, `justfile`, `.gitignore`, one
    `db/db1/migrations/` with a trivial init migration + `atlas.sum`.
-2. Per-db k8s for `db1` (`atlas/` and `postgres/` resources + `production`
-   overlay).
-3. `k8s/argocd/` bootstrap kustomize, plus `cluster-up` / `init` justfile
-   targets. Verify ArgoCD comes up cleanly.
-4. App-of-apps (`k8s/cluster/production/root-app.yaml`, `k8s/apps/*`).
-5. Both ApplicationSets, with `db1` as the only target.
-6. `just new-db some-other-db` to confirm a fresh dir produces two new
-   ArgoCD Applications with no top-level edits.
+2. Per-db k8s for `db1` (resources/ + overlays/production), with sync-wave
+   annotations so postgres precedes the migrate Job.
+3. `k8s/apps/argocd/` install kustomize, plus `up` / `down` justfile targets.
+   Verify ArgoCD comes up cleanly.
+4. App-of-apps (`k8s/cluster/production/root-app.yaml`, `k8s/apps/kustomization.yaml`)
+   plus self-management of argocd.
+5. The `db-sets` ApplicationSet, with `db1` as the only target.
+6. `just new some-other-db` to confirm a fresh dir produces a new ArgoCD
+   Application with no top-level edits.
 
 ## Open questions
 
 - ArgoCD version to pin to.
 - Postgres image/version (default to `postgres:16`).
-- Migration credential strategy: hardcoded local creds in the production
-  overlay for now; revisit if/when this leaves the playground.
+- Final image base: `scratch` vs `distroless/static:nonroot`.
+- Migration credential strategy: hardcoded in the production overlay for now;
+  revisit if/when this leaves the playground.
